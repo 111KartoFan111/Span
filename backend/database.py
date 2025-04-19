@@ -20,7 +20,7 @@ metadata = MetaData(naming_convention=convention)
 db = SQLAlchemy(metadata=metadata)
 
 # Получение URL базы данных из переменных окружения
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/quicket")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:0000@localhost:5432/quicket")
 
 def init_app(app):
     """Инициализация приложения с настройками базы данных"""
