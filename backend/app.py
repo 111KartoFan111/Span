@@ -1208,6 +1208,10 @@ def update_user_role(user_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': f'Ошибка: {str(e)}'}), 500
+    
+    
+with app.app_context():
+    db.create_all()
 
 if __name__ == '__main__':
     app.run(debug=True)
