@@ -1,45 +1,95 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
-
-const AdminVenueForm = ({ venue, onSave, onCancel }) => {
+const AdminEventForm = ({ event, venues, onSave, onCancel }) => {
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
-    name: '',
-    address: '',
+    title: '',
+    type: 'SPORT',
+    venue_id: '',
+    date: '',
+    time: '18:00',
+    duration: 60,
+    total_seats: 100,
+    price: 1000,
     description: '',
-    capacity: 100,
-    latitude: null,
-    longitude: null
+    event_subtype: '',
+    image_url: '',
+    background_music_url: '',
+    organizer: '',
+    featured: false,
+    status: 'UPCOMING',
+    media: []
   });
   const [errors, setErrors] = useState({});
+  const [showMediaForm, setShowMediaForm] = useState(false);
+  const [tempMedia, setTempMedia] = useState({ type: 'image', url: '', description: '' });
 
-  // Инициализация формы при редактировании существующего места проведения
+  // Типы событий
+  const eventTypes = [
+    { value: 'SPORT', label: 'Спорт' },
+    { value: 'CONCERT', label: 'Концерт' },
+    { value: 'THEATER', label: 'Театр' },
+    { value: 'EXHIBITION', label: 'Выставка' },
+    { value: 'WORKSHOP', label: 'Мастер-класс' },
+    { value: 'OTHER', label: 'Другое' }
+  ];
+
+  // Статусы событий
+  const eventStatuses = [
+    { value: 'UPCOMING', label: 'Предстоящее' },
+    { value: 'ONGOING', label: 'Проходит' },
+    { value: 'FINISHED', label: 'Завершено' },
+    { value: 'CANCELLED', label: 'Отменено' }
+  ];
+
+  // Инициализация формы при редактировании существующего события
   useEffect(() => {
-    if (venue) {
+    if (event) {
+      const formattedDate = event.date ? event.date.split('T')[0] : '';
+      
       setFormData({
-        name: venue.name || '',
-        address: venue.address || '',
-        description: venue.description || '',
-        capacity: venue.capacity || 100,
-        latitude: venue.latitude || null,
-        longitude: venue.longitude || null
+        title: event.title || '',
+        type: event.type || 'SPORT',
+        venue_id: event.venue_id || '',
+        date: formattedDate,
+        time: event.time || '18:00',
+        duration: event.duration || 60,
+        total_seats: event.total_seats || 100,
+        price: event.price || 1000,
+        description: event.description || '',
+        event_subtype: event.event_subtype || '',
+        image_url: event.image_url || '',
+        background_music_url: event.background_music_url || '',
+        organizer: event.organizer || '',
+        featured: event.featured || false,
+        status: event.status || 'UPCOMING',
+        media: event.media || []
       });
+    } else {
+      // Для создания нового события, устанавливаем текущую дату в формате YYYY-MM-DD
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      
+      setFormData(prevData => ({
+        ...prevData,
+        date: `${year}-${month}-${day}`
+      }));
     }
-  }, [venue]);
+  }, [event]);
 
   // Обработчик изменения полей формы
   const handleChange = (e) => {
-    const { name, value, type } = e.target;
+    const { name, value, type, checked } = e.target;
     
-    // Для числовых полей преобразуем значение в число
-    const processedValue = type === 'number' ? 
-      (value === '' ? '' : Number(value)) : 
-      value;
+    // Для чекбоксов берем свойство checked
+    const newValue = type === 'checkbox' ? checked : value;
     
     setFormData(prevData => ({
       ...prevData,
-      [name]: processedValue
+      [name]: newValue
     }));
     
     // Сбрасываем ошибку для поля, которое изменилось
@@ -51,29 +101,64 @@ const AdminVenueForm = ({ venue, onSave, onCancel }) => {
     }
   };
 
+  // Обработчик изменения полей формы временного медиафайла
+  const handleMediaChange = (e) => {
+    const { name, value } = e.target;
+    
+    setTempMedia(prevMedia => ({
+      ...prevMedia,
+      [name]: value
+    }));
+  };
+
+  // Добавление медиафайла
+  const handleAddMedia = () => {
+    if (tempMedia.url) {
+      setFormData(prevData => ({
+        ...prevData,
+        media: [...prevData.media, { ...tempMedia }]
+      }));
+      
+      // Сброс формы добавления медиа
+      setTempMedia({ type: 'image', url: '', description: '' });
+      setShowMediaForm(false);
+    }
+  };
+
+  // Удаление медиафайла
+  const handleDeleteMedia = (index) => {
+    setFormData(prevData => ({
+      ...prevData,
+      media: prevData.media.filter((_, i) => i !== index)
+    }));
+  };
+
   // Валидация формы
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.name.trim()) {
-      newErrors.name = t('admin.venues.validation.nameRequired');
+    if (!formData.title.trim()) {
+      newErrors.title = t('admin.events.validation.titleRequired', 'Название обязательно');
     }
     
-    if (!formData.address.trim()) {
-      newErrors.address = t('admin.venues.validation.addressRequired');
+    if (!formData.venue_id) {
+      newErrors.venue_id = t('admin.events.validation.venueRequired', 'Выберите место проведения');
     }
     
-    if (formData.capacity <= 0) {
-      newErrors.capacity = t('admin.venues.validation.capacityPositive');
+    if (!formData.date) {
+      newErrors.date = t('admin.events.validation.dateRequired', 'Дата обязательна');
     }
     
-    // Проверка валидности координат, если они указаны
-    if (formData.latitude !== null && (isNaN(formData.latitude) || formData.latitude < -90 || formData.latitude > 90)) {
-      newErrors.latitude = t('admin.venues.validation.invalidLatitude');
+    if (!formData.time) {
+      newErrors.time = t('admin.events.validation.timeRequired', 'Время обязательно');
     }
     
-    if (formData.longitude !== null && (isNaN(formData.longitude) || formData.longitude < -180 || formData.longitude > 180)) {
-      newErrors.longitude = t('admin.venues.validation.invalidLongitude');
+    if (formData.total_seats <= 0) {
+      newErrors.total_seats = t('admin.events.validation.seatsPositive', 'Количество мест должно быть положительным');
+    }
+    
+    if (formData.price < 0) {
+      newErrors.price = t('admin.events.validation.priceNonNegative', 'Цена не может быть отрицательной');
     }
     
     setErrors(newErrors);
@@ -85,163 +170,345 @@ const AdminVenueForm = ({ venue, onSave, onCancel }) => {
     e.preventDefault();
     
     if (validateForm()) {
-      onSave(formData);
-    }
-  };
-
-  // Обработчик автоматического получения координат по адресу
-  const handleGeocoding = async () => {
-    if (!formData.address.trim()) {
-      setErrors(prevErrors => ({
-        ...prevErrors,
-        address: t('admin.venues.validation.addressRequired')
-      }));
-      return;
-    }
-    
-    try {
-      // Здесь можно реализовать интеграцию с геокодингом,
-      // например через Nominatim или Google Maps Geocoding API
-      // Примерная реализация:
+      // Преобразуем строковые ID в числовые перед отправкой
+      const processingData = {
+        ...formData,
+        venue_id: parseInt(formData.venue_id, 10),
+        total_seats: parseInt(formData.total_seats, 10),
+        price: parseFloat(formData.price),
+        duration: parseInt(formData.duration, 10)
+      };
       
-      // Для примера, устанавливаем случайные координаты
-      const randomLat = 43.2 + Math.random() * 0.4; // Примерные координаты Казахстана
-      const randomLng = 76.8 + Math.random() * 0.4;
-      
-      setFormData(prevData => ({
-        ...prevData,
-        latitude: randomLat,
-        longitude: randomLng
-      }));
-      
-      // В реальном приложении здесь будет запрос к API геокодинга
-      /*
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(formData.address)}`
-      );
-      const data = await response.json();
-      
-      if (data && data.length > 0) {
-        setFormData(prevData => ({
-          ...prevData,
-          latitude: parseFloat(data[0].lat),
-          longitude: parseFloat(data[0].lon)
-        }));
-      } else {
-        setErrors(prevErrors => ({
-          ...prevErrors,
-          address: t('admin.venues.validation.geocodingFailed')
-        }));
-      }
-      */
-    } catch (error) {
-      console.error('Ошибка геокодинга:', error);
-      setErrors(prevErrors => ({
-        ...prevErrors,
-        address: t('admin.venues.validation.geocodingError')
-      }));
+      onSave(processingData);
     }
   };
 
   return (
     <div className="admin-form-container">
       <h2>
-        {venue ? t('admin.venues.editVenue') : t('admin.venues.createVenue')}
+        {event ? t('admin.events.editEvent', 'Редактирование мероприятия') : t('admin.events.createEvent', 'Создание нового мероприятия')}
       </h2>
       
       <form onSubmit={handleSubmit} className="admin-form">
         <div className="form-row">
           <div className="form-group">
-            <label htmlFor="name">{t('admin.venues.name')} *</label>
+            <label htmlFor="title">{t('admin.events.title', 'Название')} *</label>
             <input
               type="text"
-              id="name"
-              name="name"
-              value={formData.name}
+              id="title"
+              name="title"
+              value={formData.title}
               onChange={handleChange}
-              className={errors.name ? 'error' : ''}
+              className={errors.title ? 'error' : ''}
             />
-            {errors.name && <div className="error-message">{errors.name}</div>}
+            {errors.title && <div className="error-message">{errors.title}</div>}
           </div>
           
           <div className="form-group">
-            <label htmlFor="capacity">{t('admin.venues.capacity')} *</label>
-            <input
-              type="number"
-              id="capacity"
-              name="capacity"
-              min="1"
-              value={formData.capacity}
+            <label htmlFor="type">{t('admin.events.type', 'Тип')} *</label>
+            <select
+              id="type"
+              name="type"
+              value={formData.type}
               onChange={handleChange}
-              className={errors.capacity ? 'error' : ''}
-            />
-            {errors.capacity && <div className="error-message">{errors.capacity}</div>}
+            >
+              {eventTypes.map(type => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
         
-        <div className="form-group">
-          <label htmlFor="address">{t('admin.venues.address')} *</label>
-          <div className="input-with-button">
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="venue_id">{t('admin.events.venue', 'Место проведения')} *</label>
+            <select
+              id="venue_id"
+              name="venue_id"
+              value={formData.venue_id}
+              onChange={handleChange}
+              className={errors.venue_id ? 'error' : ''}
+            >
+              <option value="">{t('admin.events.selectVenue', 'Выберите место')}</option>
+              {venues && venues.map(venue => (
+                <option key={venue.id} value={venue.id}>
+                  {venue.name}
+                </option>
+              ))}
+            </select>
+            {errors.venue_id && <div className="error-message">{errors.venue_id}</div>}
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="event_subtype">{t('admin.events.subtype', 'Подтип')} </label>
             <input
               type="text"
-              id="address"
-              name="address"
-              value={formData.address}
+              id="event_subtype"
+              name="event_subtype"
+              value={formData.event_subtype}
               onChange={handleChange}
-              className={errors.address ? 'error' : ''}
+              placeholder={t('admin.events.subtypePlaceholder', 'Например: футбол, баскетбол и т.д.')}
             />
-            <button
-              type="button"
-              className="geocode-button"
-              onClick={handleGeocoding}
-            >
-                {t('admin.venues.geocode')}
-            </button>
           </div>
-            {errors.address && <div className="error-message">{errors.address}</div>}
+        </div>
+        
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="date">{t('admin.events.date', 'Дата')} *</label>
+            <input
+              type="date"
+              id="date"
+              name="date"
+              value={formData.date}
+              onChange={handleChange}
+              className={errors.date ? 'error' : ''}
+            />
+            {errors.date && <div className="error-message">{errors.date}</div>}
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="time">{t('admin.events.time', 'Время')} *</label>
+            <input
+              type="time"
+              id="time"
+              name="time"
+              value={formData.time}
+              onChange={handleChange}
+              className={errors.time ? 'error' : ''}
+            />
+            {errors.time && <div className="error-message">{errors.time}</div>}
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="duration">{t('admin.events.duration', 'Продолжительность (мин.)')}</label>
+            <input
+              type="number"
+              id="duration"
+              name="duration"
+              min="10"
+              value={formData.duration}
+              onChange={handleChange}
+            />
+          </div>
+        </div>
+        
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="total_seats">{t('admin.events.totalSeats', 'Всего мест')} *</label>
+            <input
+              type="number"
+              id="total_seats"
+              name="total_seats"
+              min="1"
+              value={formData.total_seats}
+              onChange={handleChange}
+              className={errors.total_seats ? 'error' : ''}
+            />
+            {errors.total_seats && <div className="error-message">{errors.total_seats}</div>}
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="price">{t('admin.events.price', 'Цена (тг)')} *</label>
+            <input
+              type="number"
+              id="price"
+              name="price"
+              min="0"
+              step="100"
+              value={formData.price}
+              onChange={handleChange}
+              className={errors.price ? 'error' : ''}
+            />
+            {errors.price && <div className="error-message">{errors.price}</div>}
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="status">{t('admin.events.status', 'Статус')}</label>
+            <select
+              id="status"
+              name="status"
+              value={formData.status}
+              onChange={handleChange}
+            >
+              {eventStatuses.map(status => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="organizer">{t('admin.events.organizer', 'Организатор')}</label>
+            <input
+              type="text"
+              id="organizer"
+              name="organizer"
+              value={formData.organizer}
+              onChange={handleChange}
+            />
+          </div>
+          
+          <div className="form-group checkbox-group">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                name="featured"
+                checked={formData.featured}
+                onChange={handleChange}
+              />
+              {t('admin.events.featured', 'Избранное мероприятие')}
+            </label>
+          </div>
         </div>
         
         <div className="form-group">
-          <label htmlFor="latitude">{t('admin.venues.latitude')}</label>
+          <label htmlFor="image_url">{t('admin.events.imageUrl', 'URL изображения')}</label>
           <input
-            type="number"
-            id="latitude"
-            name="latitude"
-            value={formData.latitude}
+            type="text"
+            id="image_url"
+            name="image_url"
+            value={formData.image_url}
             onChange={handleChange}
+            placeholder="https://example.com/image.jpg"
           />
         </div>
         
         <div className="form-group">
-          <label htmlFor="longitude">{t('admin.venues.longitude')}</label>
-          <input      
-            type="number"
-            id="longitude"
-            name="longitude"
-            value={formData.longitude}
+          <label htmlFor="background_music_url">{t('admin.events.backgroundMusicUrl', 'URL фоновой музыки')}</label>
+          <input
+            type="text"
+            id="background_music_url"
+            name="background_music_url"
+            value={formData.background_music_url}
             onChange={handleChange}
+            placeholder="https://example.com/music.mp3"
           />
         </div>
+        
         <div className="form-group">
-          <label htmlFor="description">{t('admin.venues.description')}</label>
+          <label htmlFor="description">{t('admin.events.description', 'Описание')}</label>
           <textarea
             id="description"
             name="description"
+            rows="5"
             value={formData.description}
             onChange={handleChange}
-          />
+          ></textarea>
         </div>
+        
+        {/* Раздел медиафайлов */}
+        <div className="form-section">
+          <h3 className="section-title">{t('admin.events.media', 'Медиафайлы')}</h3>
+          
+          {formData.media.length > 0 ? (
+            <div className="media-list">
+              {formData.media.map((media, index) => (
+                <div key={index} className="media-item">
+                  <div className="media-info">
+                    <strong>{media.type === 'image' ? 'Изображение' : 
+                            media.type === 'video' ? 'Видео' : 'Аудио'}</strong>: {media.url}
+                    {media.description && <span> ({media.description})</span>}
+                  </div>
+                  <button 
+                    type="button" 
+                    className="btn-danger btn-sm"
+                    onClick={() => handleDeleteMedia(index)}
+                  >
+                    Удалить
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="no-media">{t('admin.events.noMedia', 'Нет добавленных медиафайлов')}</p>
+          )}
+          
+          {showMediaForm ? (
+            <div className="media-form">
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="mediaType">{t('admin.events.mediaType', 'Тип медиа')}</label>
+                  <select
+                    id="mediaType"
+                    name="type"
+                    value={tempMedia.type}
+                    onChange={handleMediaChange}
+                  >
+                    <option value="image">Изображение</option>
+                    <option value="video">Видео</option>
+                    <option value="audio">Аудио</option>
+                  </select>
+                </div>
+                
+                <div className="form-group">
+                  <label htmlFor="mediaUrl">{t('admin.events.mediaUrl', 'URL медиафайла')} *</label>
+                  <input
+                    type="text"
+                    id="mediaUrl"
+                    name="url"
+                    value={tempMedia.url}
+                    onChange={handleMediaChange}
+                    placeholder="https://example.com/media.jpg"
+                  />
+                </div>
+              </div>
+              
+              <div className="form-group">
+                <label htmlFor="mediaDescription">{t('admin.events.mediaDescription', 'Описание')}</label>
+                <input
+                  type="text"
+                  id="mediaDescription"
+                  name="description"
+                  value={tempMedia.description}
+                  onChange={handleMediaChange}
+                  placeholder="Краткое описание медиафайла"
+                />
+              </div>
+              
+              <div className="media-form-actions">
+                <button 
+                  type="button" 
+                  className="btn-success btn-sm"
+                  onClick={handleAddMedia}
+                >
+                  {t('admin.events.addMedia', 'Добавить')}
+                </button>
+                <button 
+                  type="button" 
+                  className="btn-outline btn-sm"
+                  onClick={() => setShowMediaForm(false)}
+                >
+                  {t('common.cancel', 'Отмена')}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button 
+              type="button" 
+              className="btn-secondary btn-sm"
+              onClick={() => setShowMediaForm(true)}
+            >
+              {t('admin.events.addNewMedia', 'Добавить медиафайл')}
+            </button>
+          )}
+        </div>
+        
         <div className="form-actions">
           <button type="submit" className="save-button">
-            {venue ? t('admin.venues.saveChanges') : t('admin.venues.create')}
+            {event ? t('admin.events.saveChanges', 'Сохранить изменения') : t('admin.events.create', 'Создать')}
           </button>
           <button type="button" className="cancel-button" onClick={onCancel}>
-            {t('common.cancel')}
+            {t('common.cancel', 'Отмена')}
           </button>
         </div>
       </form>
     </div>
   );
-}
+};
 
-export default AdminVenueForm;
+export default AdminEventForm;

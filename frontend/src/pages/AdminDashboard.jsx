@@ -5,6 +5,7 @@ import { AuthContext } from '../contexts/AuthContext';
 import apiService from '../services/api';
 
 import '../styles/AdminDashboard.css';
+import '../styles/AdminForm.css';
 
 // Import admin components
 import AdminEventForm from '../components/Admin/AdminEventForm';
