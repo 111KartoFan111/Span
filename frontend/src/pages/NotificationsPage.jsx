@@ -1,22 +1,22 @@
-import { useState, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AuthContext } from '../../contexts/AuthContext';
-import '../../styles/NotificationsPage.css';
+import { AuthContext } from '../contexts/AuthContext';
+import '../styles/NotificationsPage.css';
 
 const NotificationsPage = () => {
   const { t } = useTranslation();
   const { user } = useContext(AuthContext);
 
-  // Временные моковые данные для демонстрации интерфейса
-  // В будущем эти данные будут приходить с сервера
-  const [notifications] = useState([
+  // Temporary mock data for demonstration
+  // In the future, this data will come from the server
+  const [notifications, setNotifications] = useState([
     {
       id: "n1",
       type: "booking_created",
       title: "Билет забронирован",
       message: "Вы успешно забронировали билет на мероприятие «Баскетбол секциясы»",
       read: false,
-      created_at: new Date(Date.now() - 10 * 60000).toISOString() // 10 минут назад
+      created_at: new Date(Date.now() - 10 * 60000).toISOString() // 10 minutes ago
     },
     {
       id: "n2",
@@ -24,7 +24,7 @@ const NotificationsPage = () => {
       title: "Напоминание о мероприятии",
       message: "Мероприятие «Жаңадан бастаушыларға арналған жүзу» состоится завтра в 15:00",
       read: false,
-      created_at: new Date(Date.now() - 3 * 3600000).toISOString() // 3 часа назад
+      created_at: new Date(Date.now() - 3 * 3600000).toISOString() // 3 hours ago
     },
     {
       id: "n3",
@@ -32,7 +32,7 @@ const NotificationsPage = () => {
       title: "Бронирование отменено",
       message: "Ваше бронирование на мероприятие «Футбол» было отменено",
       read: true,
-      created_at: new Date(Date.now() - 2 * 86400000).toISOString() // 2 дня назад
+      created_at: new Date(Date.now() - 2 * 86400000).toISOString() // 2 days ago
     },
     {
       id: "n4",
@@ -43,6 +43,8 @@ const NotificationsPage = () => {
       created_at: new Date(Date.now() - 7 * 86400000).toISOString()
     }
   ]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const getNotificationIcon = (type) => {
     switch (type) {
@@ -59,7 +61,7 @@ const NotificationsPage = () => {
     }
   };
 
-  // Функция для форматирования даты
+  // Function to format date
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat(t('locale') || 'ru-RU', {
@@ -71,23 +73,39 @@ const NotificationsPage = () => {
     }).format(date);
   };
 
-  // В будущем здесь будут обработчики для отметки прочитанных уведомлений и удаления
+  // In the future, these will be handlers for marking notifications as read and deleting
   const handleMarkAsRead = (notificationId) => {
-    console.log('Отметить как прочитанное:', notificationId);
-    // Здесь будет вызов API
+    console.log('Mark as read:', notificationId);
+    // Update local state to mark notification as read
+    setNotifications(prevNotifications => 
+      prevNotifications.map(notification => 
+        notification.id === notificationId 
+          ? { ...notification, read: true }
+          : notification
+      )
+    );
+    // Here would be an API call
   };
 
   const handleDeleteNotification = (notificationId) => {
-    console.log('Удалить уведомление:', notificationId);
-    // Здесь будет вызов API
+    console.log('Delete notification:', notificationId);
+    // Update local state to remove notification
+    setNotifications(prevNotifications => 
+      prevNotifications.filter(notification => notification.id !== notificationId)
+    );
+    // Here would be an API call
   };
 
   const handleMarkAllAsRead = () => {
-    console.log('Отметить все как прочитанные');
-    // Здесь будет вызов API
+    console.log('Mark all as read');
+    // Update all notifications to read status
+    setNotifications(prevNotifications => 
+      prevNotifications.map(notification => ({ ...notification, read: true }))
+    );
+    // Here would be an API call
   };
 
-  // Если пользователь не авторизован, показываем сообщение
+  // If user is not authenticated, show a message
   if (!user) {
     return (
       <div className="notifications-page">
@@ -105,7 +123,7 @@ const NotificationsPage = () => {
     <div className="notifications-page">
       <div className="notifications-header">
         <h1>{t('notifications.title')}</h1>
-        {notifications.length > 0 && (
+        {notifications.length > 0 && notifications.some(n => !n.read) && (
           <button 
             className="mark-all-read-btn"
             onClick={handleMarkAllAsRead}
@@ -115,7 +133,19 @@ const NotificationsPage = () => {
         )}
       </div>
 
-      {notifications.length === 0 ? (
+      {loading ? (
+        <div className="notifications-loading">
+          <div className="loading-spinner"></div>
+          <p>{t('common.loading')}</p>
+        </div>
+      ) : error ? (
+        <div className="notifications-error">
+          <p>{error}</p>
+          <button className="retry-btn" onClick={() => window.location.reload()}>
+            {t('common.retry', 'Повторить')}
+          </button>
+        </div>
+      ) : notifications.length === 0 ? (
         <div className="no-notifications">
           <div className="no-notifications-icon"></div>
           <p>{t('notifications.noNotifications', 'У вас пока нет уведомлений')}</p>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import apiService from '../../services/api';
 import AdminEventForm from './AdminEventForm.jsx';
-import '../../styles/AdminEvents.css';
+
 
 const AdminEventsList = () => {
   const { t } = useTranslation();

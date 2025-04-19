@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import apiService from '../../services/api';
-import AdminVenueForm from './AdminVenueForm';
-import '../../styles/AdminVenues.css';
 
 const AdminVenuesList = () => {
   const { t } = useTranslation();

@@ -14,6 +14,8 @@ import EventDetailPage from './pages/EventDetailPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import BookingsPage from './pages/BookingsPage';
+import NotificationsPage from './pages/NotificationsPage';
+import AdminDashboard from './pages/AdminDashboard';
 
 import './i18n';
 import './styles/global.css';
@@ -54,7 +56,6 @@ function App() {
   const [logoUrl, setLogoUrl] = useState('');
 
   useEffect(() => {
-
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       try {
@@ -88,6 +89,13 @@ function App() {
     return children;
   };
 
+  const AdminRoute = ({ children }) => {
+    if (!user || user.role !== 'admin') {
+      return <Navigate to="/" />;
+    }
+    return children;
+  };
+
   if (logoUrl && typeof window !== 'undefined') {
     window.appLogo = logoUrl;
   }
@@ -105,14 +113,13 @@ function App() {
     <AuthContext.Provider value={{ user, login, logout }}>
       <div className="app">
         <GlobalLanguageSwitcher />
-                <Sidebar menuOpen={menuOpen} toggleMenu={toggleMenu} logoUrl={logoUrl} />
+        <Sidebar menuOpen={menuOpen} toggleMenu={toggleMenu} logoUrl={logoUrl} />
 
         <div className={`main-content ${menuOpen ? 'shifted' : ''}`}>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/events" element={<EventsPage />} />
             <Route path="/events/:id" element={<EventDetailPage />} />
-            {/* Защищенные маршруты */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route 
@@ -121,6 +128,22 @@ function App() {
                 <ProtectedRoute>
                   <BookingsPage />
                 </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/notifications" 
+              element={
+                <ProtectedRoute>
+                  <NotificationsPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin" 
+              element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
               } 
             />
             <Route path="*" element={<Navigate to="/" />} />
